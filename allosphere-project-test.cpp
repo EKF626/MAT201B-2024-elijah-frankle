@@ -209,11 +209,16 @@ void onInit() override {
         g.pointSize(pointSize);
         g.meshColor();
         Mesh finalMesh;
-        MeshNode* node = meshList.head;
-        for (int i = 0; i < meshList.length; i++) {
-            setMeshColor(node->mesh, Color(1.0f, 1.0f, 1.0f, 1.0f-i/(float)(meshList.length)));
-            finalMesh.merge(node->mesh);
-            node = node->next;
+        finalMesh.primitive(Mesh::POINTS);
+        // MeshNode* node = meshList.head;
+        // for (int i = 0; i < meshList.length; i++) {
+        //     setMeshColor(node->mesh, Color(1.0f, 1.0f, 1.0f, 1.0f-i/(float)(meshList.length)));
+        //     finalMesh.merge(node->mesh);
+        //     node = node->next;
+        // }
+        for (int i = 0; i < numParticles; i++) {
+            finalMesh.vertex(state().particles[i]);
+            finalMesh.color(1, 1, 1);
         }
         g.draw(finalMesh);
     }
