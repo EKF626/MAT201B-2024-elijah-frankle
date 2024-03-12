@@ -9,11 +9,17 @@
 #include "al_ext/statedistribution/al_CuttleboneStateSimulationDomain.hpp"
 
 using namespace al;
+using namespace std;
 
 static const int numParticles = 1500;
-static const int trailLength = 30;
+static const int trailLength = 100;
 static const float baseSpeed = 0.3;
 static const float speedBoost = 0.7;
+const float radius = 1;
+const float allowance = 0.2;
+const float speedConst = 0.02;
+
+string slurp(string fileName);
 
 Vec3f sphereToCar(float t, float p) {
     float x = sin(t) * cos(p);
@@ -48,12 +54,14 @@ struct CommonState {
 };
 
 struct MyApp : DistributedAppWithState<CommonState> {
-    Parameter theta{"theta", "", 0, -M_PI, M_PI};
-    Parameter phi{"phi", "", 0.0, -M_PI, M_PI};
+    Parameter theta{"theta", "", 0.0, -M_PI, M_PI};
+    Parameter phi{"phi", "", 0.0, -M_PI/2.0, M_PI/2.0};
     Parameter pointSize{"pointSize", "", 4.0, 1.0, 10.0};
     Parameter chaos{"chaos", "", 0.0, 0.0, 1.0};
 
     RingBuffer<Vec3f> particlePositions[numParticles];
+
+    ShaderProgram starShader;
 
     void onInit() override {
         auto cuttleboneDomain =
@@ -75,7 +83,7 @@ struct MyApp : DistributedAppWithState<CommonState> {
     void onCreate() override {
         if (isPrimary()) {
             for (int i = 0; i < numParticles; i++) {
-                Vec3f pos = rnd::ball<Vec3f>();
+                Vec3f pos = rnd::ball<Vec3f>() * radius;
                 state().currentParticles[i] =  pos;
             }
 
@@ -86,13 +94,28 @@ struct MyApp : DistributedAppWithState<CommonState> {
         for (int i = 0; i < numParticles; i++) {
             particlePositions[i].resize(trailLength);
         }
+
+        starShader.compile(slurp("../star-vertex.glsl"),
+                        slurp("../star-fragment.glsl"),
+                        slurp("../star-geometry.glsl"));
     }
 
     void onAnimate(double dt) override {
         if (isPrimary()) {
+            theta = theta + (chaos*0.8+0.01)*speedConst;
+            if (theta > M_PI) {theta = theta - 2.0*M_PI;}
+            phi = phi + (chaos*0.8+0.01)*speedConst*0.25;
+            if (phi > M_PI/2.0) {phi = phi - M_PI;}
             float amount = (baseSpeed + speedBoost * chaos) * dt;
             for (int i = 0; i < numParticles; i++) {
                 Vec3f newPoint = rotatePoint(state().currentParticles[i], theta, phi, amount);
+                newPoint += rnd::ball<Vec3f>() * chaos * 0.01;
+                // newPoint = newPoint.lerp(Vec3f(newPoint).mag(radius), 1-chaos);
+                if (Vec3f(newPoint).mag() > radius+allowance*chaos) {
+                    newPoint.mag(radius+allowance*chaos);
+                } else if (Vec3f(newPoint).mag() < radius-allowance*chaos) {
+                    newPoint.mag(radius-allowance*chaos);
+                }
                 state().currentParticles[i] = newPoint;
             }
         }
@@ -104,18 +127,21 @@ struct MyApp : DistributedAppWithState<CommonState> {
         }
 
         g.clear();
+        g.shader(starShader);
         g.blending(true);
         g.blendTrans();
         g.depthTesting(true);
         g.pointSize(pointSize);
         g.meshColor();
 
+        g.shader().uniform("secondColor", Vec3f(0, 0, 0.9));
+
         Mesh newMesh;
         newMesh.primitive(Mesh::POINTS);
         for (int i = 0; i < numParticles; i++) {
             for (int j = 0; j < trailLength; j++) {
                 newMesh.vertex(particlePositions[i][(particlePositions[i].pos()+j)%trailLength]);
-                newMesh.color(Color(1.0, j/(float)trailLength));
+                newMesh.color(Color(0.8+chaos*0.2, 0.8-chaos*0.8, 1-chaos, j/(float)trailLength));
             }
         }
 
@@ -126,4 +152,15 @@ struct MyApp : DistributedAppWithState<CommonState> {
 int main() {
     MyApp app;
     app.start();
+}
+
+string slurp(string fileName) {
+  fstream file(fileName);
+  string returnValue = "";
+  while (file.good()) {
+    string line;
+    getline(file, line);
+    returnValue += line + "\n";
+  }
+  return returnValue;
 }
