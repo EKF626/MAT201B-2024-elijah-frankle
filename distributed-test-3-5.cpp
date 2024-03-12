@@ -106,11 +106,11 @@ struct MyApp : DistributedAppWithState<CommonState> {
             if (theta > M_PI) {theta = theta - 2.0*M_PI;}
             phi = phi + (chaos*0.8+0.01)*speedConst*0.25;
             if (phi > M_PI/2.0) {phi = phi - M_PI;}
+
             float amount = (baseSpeed + speedBoost * chaos) * dt;
             for (int i = 0; i < numParticles; i++) {
                 Vec3f newPoint = rotatePoint(state().currentParticles[i], theta, phi, amount);
                 newPoint += rnd::ball<Vec3f>() * chaos * 0.01;
-                // newPoint = newPoint.lerp(Vec3f(newPoint).mag(radius), 1-chaos);
                 if (Vec3f(newPoint).mag() > radius+allowance*chaos) {
                     newPoint.mag(radius+allowance*chaos);
                 } else if (Vec3f(newPoint).mag() < radius-allowance*chaos) {
@@ -118,6 +118,7 @@ struct MyApp : DistributedAppWithState<CommonState> {
                 }
                 state().currentParticles[i] = newPoint;
             }
+            state().primaryNav = nav();
         }
     }
 
@@ -125,6 +126,8 @@ struct MyApp : DistributedAppWithState<CommonState> {
         for (int i = 0; i < numParticles; i++) {
             particlePositions[i].write(state().currentParticles[i]);
         }
+
+        if (!isPrimary()) {nav() = state().primaryNav;}
 
         g.clear();
         g.shader(starShader);
