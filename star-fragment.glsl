@@ -12,6 +12,7 @@ layout(location = 0) out vec4 fragmentColor;
 
 void main() {
   float r = dot(fragment.mapping, fragment.mapping);
+  if (r > 1.0) discard;
   float blendAmt = clamp(r, 0, 1);
   vec3 newColor = mix(fragment.color.rgb, secondColor, blendAmt);
   fragmentColor = vec4(newColor, fragment.color.a);
