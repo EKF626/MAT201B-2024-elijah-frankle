@@ -10,12 +10,10 @@ uniform mat4 al_ProjectionMatrix;
 
 out Vertex {
   vec4 color;
-  float size;
 }
 vertex;
 
 void main() {
   gl_Position = al_ModelViewMatrix * vec4(vertexPosition, 1.0);
   vertex.color = vertexColor;
-  vertex.size = vertexSize.x;
 }

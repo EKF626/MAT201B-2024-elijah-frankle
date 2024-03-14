@@ -51,6 +51,7 @@ Vec3f rotatePoint(Vec3f point, float t, float p, float amt) {
 struct CommonState {
     Vec3f currentParticles[numParticles];
     Nav primaryNav;
+    float pointSize;
 };
 
 struct MyApp : DistributedAppWithState<CommonState> {
@@ -119,25 +120,28 @@ struct MyApp : DistributedAppWithState<CommonState> {
                 state().currentParticles[i] = newPoint;
             }
             state().primaryNav = nav();
+            state().pointSize = pointSize;
         }
-    }
-
-    void onDraw(Graphics& g) override {
+        
         for (int i = 0; i < numParticles; i++) {
             particlePositions[i].write(state().currentParticles[i]);
         }
 
         if (!isPrimary()) {nav() = state().primaryNav;}
+    }
 
-        g.clear();
+    void onDraw(Graphics& g) override {
+
+        g.clear(0.0);
         g.shader(starShader);
         g.blending(true);
         g.blendTrans();
         g.depthTesting(true);
-        g.pointSize(pointSize);
-        g.meshColor();
+        //g.pointSize(pointSize);
+        //g.meshColor();
 
         g.shader().uniform("secondColor", Vec3f(0, 0, 0.9));
+        g.shader().uniform("pointSize", state().pointSize / 100);
 
         Mesh newMesh;
         newMesh.primitive(Mesh::POINTS);
