@@ -8,6 +8,9 @@
 #include "al_ext/statedistribution/al_CuttleboneDomain.hpp"
 #include "al_ext/statedistribution/al_CuttleboneStateSimulationDomain.hpp"
 
+#define STB_PERLIN_IMPLEMENTATION
+#include "allolib/external/stb/stb/stb_perlin.h"
+
 using namespace al;
 using namespace std;
 
@@ -15,12 +18,13 @@ static const int numParticles = 1500;
 static const int trailLength = 100;
 static const float baseSpeed = 0.1;
 static const float speedBoost = 0.9;
-const float radius = 1;
+// const float radius = 1;
 const float allowance = 0.2;
 const float speedConst = 0.02;
 const int repetition = 3;
 const float chaosOffset = 0.005;
 // const float alphaOffest = 0.2;
+const float noiseSpeed = 0.01;
 
 string slurp(string fileName);
 
@@ -64,6 +68,10 @@ struct MyApp : DistributedAppWithState<CommonState> {
     Parameter chaos{"chaos", "", 0.0, 0.0, 1.0};
 
     RingBuffer<Vec3f> particlePositions[numParticles];
+
+    int frame = 0;
+
+    float radius = 1.0;
 
     // ShaderProgram starShader;
 
@@ -127,6 +135,10 @@ struct MyApp : DistributedAppWithState<CommonState> {
             }
             state().primaryNav = nav();
             state().pointSize = pointSize;
+
+            radius = stb_perlin_noise3(frame*noiseSpeed, 0, 0, 0, 0, 0) + 1.0001;
+            cout << radius << endl;
+            frame++;
         }
         
         for (int i = 0; i < numParticles; i++) {
@@ -138,12 +150,12 @@ struct MyApp : DistributedAppWithState<CommonState> {
 
     void onDraw(Graphics& g) override {
 
-        g.clear(0.0);
+        g.clear(0.1);
         // g.shader(starShader);
         g.blending(true);
         g.blendTrans();
         g.depthTesting(true);
-        g.pointSize(pointSize);
+        g.pointSize(state().pointSize);
         g.meshColor();
 
         // g.shader().uniform("pointSize", state().pointSize / 100);
@@ -151,13 +163,21 @@ struct MyApp : DistributedAppWithState<CommonState> {
         Mesh newMesh;
         newMesh.primitive(Mesh::POINTS);
         for (int i = 0; i < numParticles; i++) {
-            for (int j = 0; j < trailLength-1; j++) {
+            for (int j = 0; j < trailLength; j++) {
                 newMesh.vertex(particlePositions[i][(particlePositions[i].pos()+j)%trailLength]);
+                // newMesh.vertex(particlePositions[i].read());
                 newMesh.color(Color(0.8+chaos*0.2, 0.8-chaos*0.8, 1-chaos, j/(float)trailLength));
             }
         }
 
         g.draw(newMesh);
+    }
+
+    bool onKeyDown(Keyboard const& k) override {
+        if (k.key() == ' ') {
+
+        }
+        return true;
     }
 };
 
