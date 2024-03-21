@@ -20,7 +20,6 @@ static const float baseSpeed = 0.1;
 static const float speedBoost = 0.9;
 static const float rotationConst = 0.02;
 static const float noiseSize = 0.1;
-static const float radius = 1.0;
 static const float chaosOffset = 0.015;
 static const float chaosMaxOffset = 0.1;
 
@@ -55,6 +54,8 @@ struct CommonState {
     Nav primaryNav;
     Vec3f currentParticles[numParticles];
     float pointSize;
+    float chaos;
+    float flickerIntens;
 };
 
 struct MyApp : DistributedAppWithState<CommonState> {
@@ -190,6 +191,8 @@ struct MyApp : DistributedAppWithState<CommonState> {
 
             state().primaryNav = nav();
             state().pointSize = pointSize;
+            state().chaos = chaos;
+            state().flickerIntens = flickerIntens;
 
             if (!frozen) {
                 frameFlicker += flickerSpeed;
@@ -224,8 +227,8 @@ struct MyApp : DistributedAppWithState<CommonState> {
                     int index = (particlePositions[i].pos()+j)%trailLength;
                     Vec3f pos = particlePositions[i][index];
                     newMesh.vertex(pos);
-                    float noiseVal = 1-flickerIntens*(0.5+stb_perlin_noise3(pos.x, pos.y, pos.z+frameFlicker, 0, 0, 0));
-                    Color c = Color(noiseVal*(0.8+chaos*0.2), noiseVal*(0.8-chaos*0.8), noiseVal*(1-chaos), j/(float)trailLength);
+                    float noiseVal = 1-state().flickerIntens*(0.5+stb_perlin_noise3(pos.x, pos.y, pos.z+frameFlicker, 0, 0, 0));
+                    Color c = Color(noiseVal*(0.8+state().chaos*0.2), noiseVal*(0.8-state().chaos*0.8), noiseVal*(1-state().chaos), j/(float)trailLength);
                     newMesh.color(c);
                 }
             }
